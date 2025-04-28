@@ -2,14 +2,16 @@
 package controller
 
 import (
-    "context"
-    "encoding/json"
-    "net/http"
-    "todo-list/config"
-    "todo-list/model"
-    "time"
+	"context"
+	"encoding/json"
+	"net/http"
+	// "os"
+	"time"
+	"todo-list/config"
+	"todo-list/model"
 
-    "go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+    "go.mongodb.org/mongo-driver/bson"
 )
 
 func CreateList(w http.ResponseWriter, r *http.Request) {
@@ -36,4 +38,33 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(list)
+}
+
+func GetAllLists(w http.ResponseWriter, r *http.Request) {
+    listCollection := config.GetCollection("lists")
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    cursor, err := listCollection.Find(ctx, bson.M{})
+    if err != nil {
+        http.Error(w, "Error fetching lists", http.StatusInternalServerError)
+        return
+    }
+    defer cursor.Close(ctx)
+
+    var lists []model.List
+    for cursor.Next(ctx) {
+        var list model.List
+        if err := cursor.Decode(&list); err != nil {
+            http.Error(w, "Error decoding list", http.StatusInternalServerError)
+            return
+        }
+        lists = append(lists, list)
+    }
+
+    // Set content-type and respond with JSON
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(lists); err != nil {
+        http.Error(w, "Error encoding response", http.StatusInternalServerError)
+    }
 }

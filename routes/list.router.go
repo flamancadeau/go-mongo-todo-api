@@ -7,5 +7,6 @@ import (
 )
 
 func RegisterListRoutes() {
-    http.HandleFunc("/lists", controller.CreateList)
+    http.HandleFunc("/api/lists", controller.CreateList)
+    http.HandleFunc("/api/getlist", controller.CreateList)
 }
